@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import org.koin.java.KoinJavaComponent.get
 import retrofit2.Call
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -38,7 +39,8 @@ data class StoryResponse(
 class GetStoriesWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
     override fun doWork(): Result {
-        val l = HNService.get().listTopStories().execute().body()
+        val hnService: HNService = get(HNService::class.java)
+        val l = hnService.listTopStories().execute().body()
         Log.d("HNReader", "Response size is ${l?.size}")
         Log.d("HNReader", "First response is ${l?.first()}")
         l?.first()?.let {
