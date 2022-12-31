@@ -1,9 +1,10 @@
 package com.jessejojojohnson.hnreader.network
 
 import android.content.Context
-import android.util.Log
 import androidx.work.Worker
 import androidx.work.WorkerParameters
+import com.jessejojojohnson.hnreader.data.AppDatabase
+import com.jessejojojohnson.hnreader.data.HNStoryEntity
 import org.koin.java.KoinJavaComponent.get
 import retrofit2.Call
 import retrofit2.Retrofit
@@ -39,14 +40,22 @@ data class StoryResponse(
 class GetStoriesWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
     override fun doWork(): Result {
+
         val hnService: HNService = get(HNService::class.java)
+        val db: AppDatabase = get(AppDatabase::class.java)
         val l = hnService.listTopStories().execute().body()
-        Log.d("HNReader", "Response size is ${l?.size}")
-        Log.d("HNReader", "First response is ${l?.first()}")
-        l?.first()?.let {
+
+        db.clearAllTables() // empty the cache first!
+
+        l?.take(10)?.forEach {
             val s = HNService.get().resolveItem(it).execute().body()
-            Log.d("HNReader", "First story with id ${s?.id} is by ${s?.by}")
-            Log.d("HNReader", "${s?.title} --> ${s?.url}")
+            val entity = HNStoryEntity(
+                id = s?.id ?: "NONE",
+                by = s?.by ?: "NONE",
+                url = s?.url ?: "NONE",
+                title = s?.title ?: "NONE"
+            )
+            db.hnEntityDao().insert(entity)
         }
         return Result.success()
     }
