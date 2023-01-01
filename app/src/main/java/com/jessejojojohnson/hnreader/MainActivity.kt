@@ -1,8 +1,10 @@
 package com.jessejojojohnson.hnreader
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -13,18 +15,26 @@ import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.jessejojojohnson.hnreader.data.AppDatabase
 import com.jessejojojohnson.hnreader.data.HNStoryEntity
 import com.jessejojojohnson.hnreader.network.GetStoriesWorker
 import com.jessejojojohnson.hnreader.ui.theme.HNReaderTheme
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.java.KoinJavaComponent.get
 
@@ -34,21 +44,50 @@ class MainActivity : ComponentActivity() {
         setContent {
             HNReaderTheme {
                 // A surface container using the 'background' color from the theme
+                val navController = rememberNavController() //nav ctrl!
+
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    HomeScreen()
+                    //HomeScreen()
+                    MainScreen(modifier = Modifier.fillMaxSize())
                 }
             }
         }
     }
 }
 
+@Composable
+fun MainScreen(
+    modifier: Modifier,
+    navController: NavHostController = rememberNavController(),
+    startDestination: String = "home"
+) {
+    NavHost(
+        modifier = modifier,
+        navController = navController,
+        startDestination = startDestination
+    ) {
+        composable("home") {
+            HomeScreen(onItemClick = {
+                navController.navigate("newsItem/$it")
+                Log.d("NavHost", "Clicked news item with $it")
+            })
+        }
+        composable(
+        "newsItem/{itemId}",
+            arguments = listOf(navArgument("itemId") { type = NavType.StringType})
+        ) { navBackStackEntry ->
+            navBackStackEntry.arguments?.getString("itemId")?.let { NewsItemDetailScreen(itemId = it) }
+        }
+    }
+}
 
 @Composable
 fun HomeScreen(
-    viewModel: HomeScreenViewModel = viewModel()
+    viewModel: HomeScreenViewModel = viewModel(),
+    onItemClick: (String) -> Unit
 ) {
     val items = rememberSaveable { mutableStateOf<List<HNStoryEntity>>(emptyList()) }
     LaunchedEffect(Unit) {
@@ -56,37 +95,63 @@ fun HomeScreen(
             items.value = it
         }
     }
-    NewsItemList(newsItems = items.value)
+    NewsItemList(newsItems = items.value, onItemClick = onItemClick)
     BtnRefresh()
 }
 
 @Composable
 fun NewsItemList(
-    newsItems: List<HNStoryEntity>
+    newsItems: List<HNStoryEntity>,
+    onItemClick: (String) -> Unit
 ) {
     LazyColumn(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         items(newsItems) { item ->
-            NewsItemRow(newsItem = item)
+            NewsItemRow(newsItem = item, onItemClick = onItemClick)
         }
     }
 }
 
 @Composable
 fun NewsItemRow(
-    newsItem: HNStoryEntity
+    newsItem: HNStoryEntity,
+    onItemClick: (String) -> Unit
 ) {
-    Column(modifier = Modifier.padding(8.dp)) {
+    Column(modifier = Modifier
+        .padding(8.dp)
+        .clickable {
+            onItemClick.invoke(newsItem.id)
+        }) {
         Text(
             text = newsItem.title,
-            style = MaterialTheme.typography.body1
+            style = MaterialTheme.typography.body1,
+
         )
         Text(
             text = newsItem.by,
             style = MaterialTheme.typography.caption
         )
+    }
+}
+
+@Composable
+fun NewsItemDetailScreen(
+    viewModel: NewsItemDetailViewModel = viewModel(),
+    itemId: String
+) {
+    val newsItem = remember {
+        mutableStateOf(HNStoryEntity.default)
+    }
+    LaunchedEffect(Unit) {
+        viewModel.getItemFlow(itemId).collect {
+            newsItem.value = it
+        }
+    }
+    Column(modifier = Modifier.padding(8.dp)) {
+        Text(text = newsItem.value.title)
+        Text(text = newsItem.value.url)
     }
 }
 
@@ -104,11 +169,17 @@ fun BtnRefresh(modifier: Modifier = Modifier.wrapContentSize()) {
 }
 
 class HomeScreenViewModel : ViewModel() {
-
     private val db: AppDatabase = get(AppDatabase::class.java)
 
     fun getItems(): List<HNStoryEntity> = db.hnEntityDao().getAll()
     fun getItemsFlow() = db.hnEntityDao().getAllFlow().distinctUntilChanged()
+}
+
+class NewsItemDetailViewModel : ViewModel() {
+    private val db: AppDatabase = get(AppDatabase::class.java)
+
+    fun getItem(itemId: String) = db.hnEntityDao().get(itemId)
+    fun getItemFlow(itemId: String) = db.hnEntityDao().getFlow(itemId).distinctUntilChanged()
 }
 
 @Preview(showBackground = true)
@@ -121,7 +192,8 @@ fun DefaultPreview() {
                 by = "Jesse",
                 title = "A title",
                 url = ""
-            )
+            ),
+            onItemClick = {}
         )
     }
 }

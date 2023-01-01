@@ -21,7 +21,11 @@ data class HNStoryEntity(
     val by: String,
     val title: String,
     val url: String
-)
+) {
+    companion object {
+        val default = HNStoryEntity("", "", "", "")
+    }
+}
 
 @Dao
 interface HNStoryEntityDao {
@@ -31,6 +35,12 @@ interface HNStoryEntityDao {
 
     @Query("SELECT * from hnstoryentity")
     fun getAllFlow() : Flow<List<HNStoryEntity>>
+
+    @Query("SELECT * from hnstoryentity WHERE id = :id")
+    fun get(id: String) : HNStoryEntity
+
+    @Query("SELECT * from hnstoryentity WHERE id = :id")
+    fun getFlow(id: String) : Flow<HNStoryEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insert(vararg stories: HNStoryEntity)
