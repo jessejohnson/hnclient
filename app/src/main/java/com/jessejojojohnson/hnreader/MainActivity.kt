@@ -1,7 +1,6 @@
 package com.jessejojojohnson.hnreader
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -30,11 +29,12 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import androidx.work.workDataOf
 import com.jessejojojohnson.hnreader.data.AppDatabase
 import com.jessejojojohnson.hnreader.data.HNStoryEntity
 import com.jessejojojohnson.hnreader.network.GetStoriesWorker
+import com.jessejojojohnson.hnreader.network.GetWebContentWorker
 import com.jessejojojohnson.hnreader.ui.theme.HNReaderTheme
-import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import org.koin.java.KoinJavaComponent.get
 
@@ -44,13 +44,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             HNReaderTheme {
                 // A surface container using the 'background' color from the theme
-                val navController = rememberNavController() //nav ctrl!
-
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colors.background
                 ) {
-                    //HomeScreen()
                     MainScreen(modifier = Modifier.fillMaxSize())
                 }
             }
@@ -72,7 +69,6 @@ fun MainScreen(
         composable("home") {
             HomeScreen(onItemClick = {
                 navController.navigate("newsItem/$it")
-                Log.d("NavHost", "Clicked news item with $it")
             })
         }
         composable(
@@ -126,8 +122,7 @@ fun NewsItemRow(
         }) {
         Text(
             text = newsItem.title,
-            style = MaterialTheme.typography.body1,
-
+            style = MaterialTheme.typography.body1
         )
         Text(
             text = newsItem.by,
@@ -147,11 +142,28 @@ fun NewsItemDetailScreen(
     LaunchedEffect(Unit) {
         viewModel.getItemFlow(itemId).collect {
             newsItem.value = it
+            WorkManager.getInstance().enqueue(
+                OneTimeWorkRequestBuilder<GetWebContentWorker>()
+                    .setInputData(
+                        workDataOf(
+                            "url" to newsItem.value.url,
+                            "itemId" to newsItem.value.id
+                        )
+                    )
+                    .build()
+            )
         }
     }
-    Column(modifier = Modifier.padding(8.dp)) {
-        Text(text = newsItem.value.title)
-        Text(text = newsItem.value.url)
+    LazyColumn(modifier = Modifier.padding(8.dp)) {
+        item {
+            Text(text = newsItem.value.title)
+        }
+        item {
+            Text(text = newsItem.value.url)
+        }
+        item {
+            Text(text = newsItem.value.content)
+        }
     }
 }
 
@@ -191,7 +203,8 @@ fun DefaultPreview() {
                 id = "1223",
                 by = "Jesse",
                 title = "A title",
-                url = ""
+                url = "",
+                content = ""
             ),
             onItemClick = {}
         )

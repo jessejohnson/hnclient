@@ -1,6 +1,10 @@
 package com.jessejojojohnson.hnreader
 
 import android.app.Application
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
 import com.jessejojojohnson.hnreader.data.HNDBService
 import com.jessejojojohnson.hnreader.network.HNService
 import org.koin.android.ext.koin.androidContext
@@ -23,4 +27,7 @@ val networkModule = module {
 
 val persistenceModule = module {
     single { HNDBService.get(androidContext()) }
+    single { HNDBService.getDataStore(androidContext()) }
 }
+
+val Context.dataStore: DataStore<Preferences> by preferencesDataStore("article_cache")
