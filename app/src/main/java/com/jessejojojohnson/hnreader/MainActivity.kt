@@ -142,24 +142,11 @@ fun NewsItemDetailScreen(
     LaunchedEffect(Unit) {
         viewModel.getItemFlow(itemId).collect {
             newsItem.value = it
-            WorkManager.getInstance().enqueue(
-                OneTimeWorkRequestBuilder<GetWebContentWorker>()
-                    .setInputData(
-                        workDataOf(
-                            "url" to newsItem.value.url,
-                            "itemId" to newsItem.value.id
-                        )
-                    )
-                    .build()
-            )
         }
     }
     LazyColumn(modifier = Modifier.padding(8.dp)) {
         item {
             Text(text = newsItem.value.title)
-        }
-        item {
-            Text(text = newsItem.value.url)
         }
         item {
             Text(text = newsItem.value.content)

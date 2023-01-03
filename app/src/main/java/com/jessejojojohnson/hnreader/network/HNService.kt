@@ -5,9 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.work.CoroutineWorker
-import androidx.work.Worker
-import androidx.work.WorkerParameters
+import androidx.work.*
 import com.jessejojojohnson.hnreader.data.AppDatabase
 import com.jessejojojohnson.hnreader.data.HNStoryEntity
 import org.jsoup.Jsoup
@@ -62,6 +60,18 @@ class GetStoriesWorker(context: Context, params: WorkerParameters) : Worker(cont
                 content = "NONE"
             )
             db.hnEntityDao().insert(entity)
+
+            //start a new Worker to download content at the same time :)
+            WorkManager.getInstance().enqueue(
+                OneTimeWorkRequestBuilder<GetWebContentWorker>()
+                    .setInputData(
+                        workDataOf(
+                            "url" to entity.url,
+                            "itemId" to entity.id
+                        )
+                    )
+                    .build()
+            )
         }
         return Result.success()
     }
