@@ -46,6 +46,7 @@ class GetStoriesWorker(context: Context, params: WorkerParameters) : Worker(cont
     override fun doWork(): Result {
         val hnService: HNService = get(HNService::class.java)
         val db: AppDatabase = get(AppDatabase::class.java)
+        val workManager: WorkManager = get(WorkManager::class.java)
         val l = hnService.listTopStories().execute().body()
 
         db.clearAllTables() // empty the cache first!
@@ -62,12 +63,12 @@ class GetStoriesWorker(context: Context, params: WorkerParameters) : Worker(cont
             db.hnEntityDao().insert(entity)
 
             //start a new Worker to download content at the same time :)
-            WorkManager.getInstance().enqueue(
+            workManager.enqueue(
                 OneTimeWorkRequestBuilder<GetWebContentWorker>()
                     .setInputData(
                         workDataOf(
-                            "url" to entity.url,
-                            "itemId" to entity.id
+                            GetWebContentWorker.URL to entity.url,
+                            GetWebContentWorker.ITEM_ID to entity.id
                         )
                     )
                     .build()
@@ -81,13 +82,15 @@ class GetWebContentWorker(context: Context, params: WorkerParameters) : Coroutin
 
     companion object {
         val articleKey = stringPreferencesKey("article")
+        const val URL = "url"
+        const val ITEM_ID = "itemId"
     }
 
     override suspend fun doWork(): Result {
         val db: AppDatabase = get(AppDatabase::class.java)
         val ds: DataStore<Preferences> = get(DataStore::class.java)
-        val url = inputData.getString("url") ?: return Result.failure()
-        val itemId = inputData.getString("itemId") ?: return Result.failure()
+        val url = inputData.getString(URL) ?: return Result.failure()
+        val itemId = inputData.getString(ITEM_ID) ?: return Result.failure()
 
         val webPage = Jsoup.connect(url).get()
         val content = webPage.body().wholeText()
