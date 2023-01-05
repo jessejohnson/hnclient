@@ -2,12 +2,15 @@ package com.jessejojojohnson.hnreader.ui.detail
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import com.jessejojojohnson.hnreader.data.AppDatabase
@@ -30,10 +33,19 @@ fun NewsItemDetailScreen(
     }
     LazyColumn(modifier = Modifier.padding(8.dp)) {
         item {
-            Text(text = newsItem.value.title)
+            Text(
+                text = newsItem.value.title,
+                style = MaterialTheme.typography.h5,
+                textDecoration = TextDecoration.Underline,
+                fontFamily = FontFamily.Serif
+            )
         }
         item {
-            Text(text = newsItem.value.content)
+            Text(
+                text = newsItem.value.content,
+                style = MaterialTheme.typography.body1,
+                fontFamily = FontFamily.Serif
+            )
         }
     }
 }

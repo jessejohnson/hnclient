@@ -51,7 +51,7 @@ class GetStoriesWorker(context: Context, params: WorkerParameters) : Worker(cont
 
         db.clearAllTables() // empty the cache first!
 
-        l?.take(10)?.forEach {
+        l?.take(20)?.forEach {
             val s = HNService.get().resolveItem(it).execute().body()
             val entity = HNStoryEntity(
                 id = s?.id ?: "NONE",

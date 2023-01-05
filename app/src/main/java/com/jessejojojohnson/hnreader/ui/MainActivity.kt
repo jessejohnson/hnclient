@@ -1,6 +1,7 @@
-package com.jessejojojohnson.hnreader
+package com.jessejojojohnson.hnreader.ui
 
 import android.os.Bundle
+import android.view.Window
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
