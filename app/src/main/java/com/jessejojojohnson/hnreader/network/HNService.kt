@@ -18,13 +18,13 @@ import retrofit2.http.Path
 
 interface HNService {
     @GET("v0/topstories.json")
-    fun listTopStories() : Call<List<String>>
+    fun listTopStories(): Call<List<String>>
 
     @GET("v0/item/{itemId}.json")
-    fun resolveItem(@Path("itemId") id: String) : Call<StoryResponse>
+    fun resolveItem(@Path("itemId") id: String): Call<StoryResponse>
 
     companion object {
-        fun get() : HNService {
+        fun get(): HNService {
             val retrofit = Retrofit.Builder()
                 .baseUrl("https://hacker-news.firebaseio.com/")
                 .addConverterFactory(GsonConverterFactory.create())
@@ -39,7 +39,7 @@ data class StoryResponse(
     val by: String,
     val title: String,
     val url: String
-    )
+)
 
 class GetStoriesWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
 
@@ -78,7 +78,8 @@ class GetStoriesWorker(context: Context, params: WorkerParameters) : Worker(cont
     }
 }
 
-class GetWebContentWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
+class GetWebContentWorker(context: Context, params: WorkerParameters) :
+    CoroutineWorker(context, params) {
 
     companion object {
         val articleKey = stringPreferencesKey("article")
