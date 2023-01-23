@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,7 +44,7 @@ fun HomeScreen(
         }
     }
     Scaffold(
-        floatingActionButton = { BtnRefresh() },
+        floatingActionButton = { BtnRefresh { viewModel.refreshContent() } },
         topBar = { Header(text = "HN Daily Digest") },
         content = {
             NewsItemList(newsItems = items.value, onItemClick = onItemClick)
@@ -53,9 +54,19 @@ fun HomeScreen(
 
 class HomeScreenViewModel : ViewModel() {
     private val db: AppDatabase = get(AppDatabase::class.java)
+    private val workManager: WorkManager = get(WorkManager::class.java)
+
+    init {
+        //refreshContent()
+    }
 
     fun getItems(): List<HNStoryEntity> = db.hnEntityDao().getAll()
     fun getItemsFlow() = db.hnEntityDao().getAllFlow().distinctUntilChanged()
+    fun refreshContent() {
+        workManager.enqueue(
+            OneTimeWorkRequestBuilder<GetStoriesWorker>().build()
+        )
+    }
 }
 
 @Composable
@@ -78,34 +89,38 @@ fun NewsItemRow(
     newsItem: HNStoryEntity,
     onItemClick: (String) -> Unit
 ) {
-    Column(modifier = Modifier
+    Row(modifier = Modifier
         .fillMaxWidth()
-        .clickable {
-            onItemClick.invoke(newsItem.id)
-        }) {
-        Text(
-            text = newsItem.title,
-            style = MaterialTheme.typography.body1,
-            modifier = Modifier.padding(top = 8.dp, start = 8.dp, end = 8.dp)
+        .clickable { onItemClick.invoke(newsItem.id) }
+    ) {
+        Icon(
+            imageVector = Icons.Default.List,
+            contentDescription = "List icon",
+            tint = Color.LightGray,
+            modifier = Modifier.width(50.dp).height(50.dp)
         )
-        Text(
-            text = newsItem.url,
-            style = MaterialTheme.typography.caption,
-            modifier = Modifier.padding(bottom = 8.dp, start = 8.dp, end = 8.dp)
-        )
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = newsItem.title,
+                style = MaterialTheme.typography.body1,
+                modifier = Modifier.padding(top = 8.dp, start = 8.dp, end = 8.dp)
+            )
+            Text(
+                text = newsItem.url,
+                style = MaterialTheme.typography.caption,
+                modifier = Modifier.padding(bottom = 8.dp, start = 8.dp, end = 8.dp)
+            )
+        }
     }
 }
 
 @Composable
-fun BtnRefresh() {
+fun BtnRefresh(
+    onItemClick: () -> Unit
+) {
     FloatingActionButton(
         modifier = Modifier.padding(5.dp),
-        onClick = {
-            val workManager: WorkManager = get(WorkManager::class.java)
-            workManager.enqueue(
-                OneTimeWorkRequestBuilder<GetStoriesWorker>().build()
-            )
-        },
+        onClick = onItemClick,
         shape = CircleShape,
         backgroundColor = Orange
     ) {
